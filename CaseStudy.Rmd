@@ -1,0 +1,267 @@
+---
+title: "Bellabeat Case Study"
+output: html_document
+date: "2025-12-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readr)
+```
+
+Introduction (ASK Phase)
+Bellabeat is a high‑tech wellness company that manufactures smart devices focused on women's health.
+The goal of this case study is to analyze smart‑device usage data to identify trends in user activity, sleep, and daily habits.
+These insights will help Bellabeat strengthen its marketing strategy and support the growth of the Leaf wellness tracker.
+
+
+
+#Prepare phase
+
+```{r  load_date, include=FALSE}
+daily_activity <- read_csv("dailyActivity_merged.csv")
+sleep_day <- read_csv("sleepDay_merged.csv")
+
+str(daily_activity)
+str(sleep_day)
+```
+
+#process phase
+
+Convert date columns from character to Date format
+
+
+```{r}
+daily_activity$ActivityDate <- as.Date(daily_activity$ActivityDate, format = "%m/%d/%Y")
+sleep_day$SleepDay <- as.Date(sleep_day$SleepDay, format = "%m/%d/%Y %I:%M:%S %p")
+
+str(daily_activity)
+str(sleep_day)
+```
+
+🔍 Exploratory Data Analysis (EDA)
+
+View column names and first row
+
+```{r}
+head(daily_activity)
+colnames(daily_activity)
+
+head(sleep_day)
+colnames(sleep_day)
+```
+
+Number of unique users
+
+```{r}
+n_distinct(daily_activity$Id)
+n_distinct(sleep_day$Id)
+```
+
+Number of observations
+
+```{r}
+nrow(daily_activity)
+nrow(sleep_day)
+```
+
+Summary Statistics
+
+Daily Activity Summary
+
+```{r}
+
+daily_activity %>%
+  select(TotalSteps, TotalDistance, SedentaryMinutes) %>%
+  summary()
+
+```
+
+Sleep Summary
+
+```{r}
+sleep_day %>%
+  select(TotalSleepRecords, TotalMinutesAsleep, TotalTimeInBed) %>%
+  summary()
+
+```
+
+
+📈 Visual Explorations (ANALYZE Phase)
+
+Steps vs calories
+
+```{r}
+ggplot(daily_activity, aes(TotalSteps, Calories)) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  labs(title = "Steps vs Calories") +
+  theme_minimal()
+```
+
+Users who take more steps tend to burn more calories.
+This confirms that physical activity is the main driver of energy expenditure
+
+Minutes Asleep vs Time in Bed
+
+```{r}
+ggplot(sleep_day, aes(TotalMinutesAsleep, TotalTimeInBed)) +
+  geom_point(alpha = 0.6, color = "blue") +
+  labs(title = "Minutes Asleep vs Time in Bed") +
+  theme_minimal()
+```
+
+There is a strong positive relationship between time in bed and minutes asleep.
+However, the scatter shows that users often spend time awake while in bed, indicating varying sleep efficiency
+
+
+
+
+🔗 Merge Datasets(Activity vs Sleep)
+
+```{r}
+
+combined_data <- merge(
+  sleep_day,
+  daily_activity,
+  by.x = c("Id", "SleepDay"),
+  by.y = c("Id", "ActivityDate")
+)
+
+n_distinct(combined_data$Id)
+combined_data
+
+combined_data %>%
+  mutate(weekday = weekdays(SleepDay)) %>%
+  group_by(weekday) %>%
+  summarise(
+    avg_steps = mean(TotalSteps, na.rm = TRUE),
+    avg_sleep = mean(TotalMinutesAsleep, na.rm = TRUE)
+  )
+
+
+```
+
+Activity and sleep patterns vary by weekday.
+This can help Bellabeat tailor notifications or coaching features based on user behavior
+
+
+
+```{r}
+
+combined_data <- combined_data %>%
+  mutate(sleep_efficiency = TotalMinutesAsleep / TotalTimeInBed)
+
+summary(combined_data$sleep_efficiency)
+
+ggplot(combined_data, aes(sleep_efficiency)) +
+  geom_histogram(bins = 30, fill = "purple", alpha = 0.7) +
+  labs(title = "Distribution of Sleep Efficiency",
+       x = "Sleep Efficiency",
+       y = "Count") +
+  theme_minimal()
+
+```
+
+Most users have moderate sleep efficiency, but the distribution shows variability.
+Some users spend a significant portion of time in bed awake, suggesting opportunities for sleep‑improvement coaching.
+
+
+Minutes Asleep vs Sedentary Minutes
+
+```{r}
+
+ggplot(data=combined_data, aes(x=TotalMinutesAsleep, y=SedentaryMinutes)) + 
+geom_point(color='darkblue') + geom_smooth() +
+  labs(title="Minutes Asleep vs. Sedentary Minutes")
+
+```
+There is no strong relationship between sedentary time and sleep duration.
+Sedentary behavior alone does not predict sleep quality.
+
+
+Steps vs Minutes Asleep
+
+```{r}
+ggplot(combined_data, aes(TotalSteps, TotalMinutesAsleep)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm") +
+  theme_minimal()
+
+```
+
+There is a weak positive trend: users who walk more may sleep slightly longer.
+However, the relationship is not strong enough to be conclusive.
+
+
+Histogram of Minutes Asleep
+```{r}
+ggplot(combined_data, aes(TotalMinutesAsleep)) +
+  geom_histogram(bins = 30, fill = "steelblue") +
+  theme_minimal()
+```
+
+Most users sleep between 350–450 minutes (about 6–7.5 hours).
+This is slightly below the recommended 7–9 hours of sleep.
+
+
+# SHARE Phase: Communicating Insights
+
+The analysis reveals several important trends in user behavior:
+
+- Users are generally not meeting recommended activity levels, averaging only 6,547 steps per day.
+- Sedentary behavior is high, with a median of 1,057 sedentary minutes per day.
+- Sleep duration is slightly below recommended levels, and sleep efficiency varies significantly.
+- Activity and sleep show only weak correlations, suggesting that users may need more structured guidance.
+- Weekday patterns indicate opportunities for targeted engagement.
+
+These insights help Bellabeat understand how users interact with their wellness data and where behavior improvements can be encouraged.
+
+
+# ACT Phase: Recommendations for Bellabeat
+
+Based on the analysis, several strategic actions can help Bellabeat improve user engagement and support healthier habits:
+
+### 1. Promote increased physical activity
+Bellabeat can introduce step‑based challenges, personalized reminders, and motivational notifications to help users reach the recommended 10,000 steps per day.
+
+### 2. Support better sleep habits
+Since sleep efficiency varies widely, Bellabeat can offer bedtime routine guidance, sleep hygiene tips, and insights when users spend too much time awake in bed.
+
+### 3. Personalize engagement based on weekday patterns
+Activity and sleep behaviors differ across the week. Bellabeat can tailor notifications and coaching to match these patterns.
+
+### 4. Highlight holistic wellness features
+Marketing should emphasize stress tracking, mindfulness, hydration reminders, and cycle tracking — features that align with user needs.
+
+### 5. Build data‑driven marketing campaigns
+Insights from real user behavior can shape campaigns that resonate with women seeking healthier routines.
+
+These actions can help Bellabeat strengthen its brand, improve user engagement, and support long‑term wellness outcomes.
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
